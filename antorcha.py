@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS (SIN ESPACIO EN BLANCO) ---
+# --- 2. ESTILOS CSS (CORREGIDO: MENÚ VISIBLE) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -26,17 +26,26 @@ st.markdown("""
     .stApp { background-color: #f3f4f6; }
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
 
-    /* --- CORRECCIÓN DEL ESPACIO EN BLANCO SUPERIOR --- */
+    /* --- AJUSTE DE ESPACIOS --- */
+    /* Damos un poco de espacio arriba (2rem) para que quepa el botón del menú sin tapar el título */
     div.block-container {
-        padding-top: 0.5rem !important; /* Reduce drásticamente el espacio arriba */
+        padding-top: 2rem !important;
         padding-bottom: 1rem !important;
-        margin-top: 1rem !important;
+        margin-top: 0rem !important;
     }
     
-    /* Ocultar menú hamburguesa y footer por defecto de Streamlit (Opcional, para más limpieza) */
+    /* Ocultamos elementos innecesarios, PERO DEJAMOS EL HEADER VISIBLE PARA VER LA FLECHITA */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;} /* Oculta la franja superior vacía */
+    /* header {visibility: hidden;}  <-- ESTA LÍNEA SE ELIMINÓ PARA RECUPERAR EL MENÚ */
+
+    /* ESTILO PARA LA FLECHITA DEL MENÚ (CUANDO ESTÁ CERRADO) */
+    [data-testid="stSidebarCollapsedControl"] {
+        color: #2563eb !important; /* Azul fuerte */
+        background-color: white;
+        border-radius: 50%;
+        border: 1px solid #e5e7eb;
+    }
 
     /* Encabezado Principal */
     h1 {
@@ -45,7 +54,7 @@ st.markdown("""
         font-size: 1.6rem !important;
         margin-bottom: 0.2rem;
         text-transform: uppercase;
-        margin-top: 0px !important; /* Asegura que el título suba */
+        margin-top: 0px !important;
     }
     
     .subtitle {
@@ -66,8 +75,8 @@ st.markdown("""
     div[data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
     div[data-testid="stMetricValue"] { font-size: 1.4rem !important; }
 
-    /* Contenedores */
-    .stDataFrame, .css-1r6slb0 {
+    /* Contenedores (Tabla y Gráfico) */
+    .stDataFrame, .css-1r6slb0, .stPlotlyChart {
         background-color: white;
         border-radius: 8px;
         padding: 10px;
@@ -118,7 +127,7 @@ if df is not None:
     f_lider = st.sidebar.selectbox("👤 Líder:", lideres)
     f_entrada = st.sidebar.selectbox("🎫 Entrada:", tipos)
     
-    if st.sidebar.button("🔄 Actualizar"):
+    if st.sidebar.button("🔄 Actualizar", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
     
@@ -132,7 +141,6 @@ if df is not None:
         df_v = df_v[df_v['Entrada'] == f_entrada]
 
     # --- DASHBOARD ---
-    # Título pegado arriba gracias al CSS
     st.markdown('<h1>MINISTERIO DE MATRIMONIOS JÓVENES - <span style="color:#3b82f6">ANTORCHA 2026</span></h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Monitor ejecutivo de control de entradas.</p>', unsafe_allow_html=True)
     
@@ -174,9 +182,10 @@ if df is not None:
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
             xaxis_title="Inscritos", yaxis_title=None,
             font=dict(family="Inter", size=11, color="#374151"),
-            margin=dict(l=0, r=0, t=30, b=0)
+            margin=dict(l=0, r=0, t=30, b=0),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-        fig.update_traces(textfont_size=11)
+        fig.update_traces(textfont_size=11, textposition='inside')
         st.plotly_chart(fig, use_container_width=True)
 
 else:
