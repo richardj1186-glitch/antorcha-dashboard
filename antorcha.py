@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS (RESPONSIVE & TOUCH FRIENDLY) ---
+# --- 2. ESTILOS CSS (Mejorados con Fondo en Gráfico) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -22,7 +22,7 @@ st.markdown("""
         font-size: 14px;
         color: #1f2937;
     }
-    .stApp { background-color: #f1f5f9; } /* Fondo gris muy suave */
+    .stApp { background-color: #f1f5f9; } /* Fondo gris página */
     
     div.block-container { 
         padding-top: 1.5rem !important; 
@@ -31,11 +31,10 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* ESTILOS PARA MÓVIL (MEDIA QUERIES) */
+    /* ESTILOS PARA MÓVIL */
     @media only screen and (max-width: 600px) {
         h1 { font-size: 1.4rem !important; }
         div[data-testid="stMetricValue"] { font-size: 1.4rem !important; }
-        .stPlotlyChart { height: 450px !important; }
     }
 
     /* Flecha menú */
@@ -46,7 +45,6 @@ st.markdown("""
         border-radius: 50%;
     }
 
-    /* Títulos */
     h1 { color: #1e3a8a; font-weight: 800; font-size: 1.8rem !important; text-transform: uppercase; margin-bottom: 0.5rem; }
     .subtitle { color: #64748b; font-size: 1rem !important; margin-bottom: 1.5rem; }
 
@@ -59,12 +57,12 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
-    /* Contenedores de Gráficos y Tablas */
+    /* Contenedores */
     .stDataFrame, .stPlotlyChart {
         background-color: white;
         border-radius: 15px;
-        padding: 10px;
-        border: 1px solid #e2e8f0;
+        padding: 15px; /* Más padding para que se vea el marco */
+        border: 1px solid #cbd5e1;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     </style>
@@ -85,7 +83,9 @@ def load_data(filepath):
         if 'Fecha de pago' in df.columns:
             df['Fecha de pago'] = pd.to_datetime(df['Fecha de pago'], errors='coerce').dt.date
         
-        # Columna limpia para filtros y KPIs
+        # --- LÓGICA DE ESTANDARIZACIÓN ---
+        # Creamos la columna 'Categoria' que fusiona (Oferta y Normal)
+        # Ejemplo: "VIP (Precio Oferta...)" -> SE CONVIERTE EN -> "VIP"
         if 'Entrada' in df.columns:
             df['Categoria'] = df['Entrada'].apply(lambda x: str(x).split('(')[0].strip())
             
@@ -115,7 +115,7 @@ if df is not None:
     tipos = ["Todos"] + sorted(df['Categoria'].astype(str).unique().tolist())
     
     f_lider = st.sidebar.selectbox("👤 Líder:", lideres)
-    f_entrada = st.sidebar.selectbox("🎫 Tipo General:", tipos)
+    f_entrada = st.sidebar.selectbox("🎫 Tipo:", tipos)
     
     if st.sidebar.button("🔄 Refrescar", use_container_width=True):
         st.cache_data.clear()
@@ -151,64 +151,64 @@ if df is not None:
 
     st.divider()
 
-    # --- GRÁFICO (RESPONSIVE + FONDO DE CUADRÍCULA) ---
+    # --- GRÁFICO ESTANDARIZADO ---
     if not df_v.empty:
-        st.subheader("📊 Rendimiento Detallado por Líder")
+        st.subheader("📊 Rendimiento Unificado")
         
         if f_lider == "Todos":
-            conteo = df_v.groupby(['Líder directo:', 'Entrada']).size().reset_index(name='Total')
+            # 1. Agrupamos por la CATEGORÍA LIMPIA (VIP, General, etc.)
+            conteo = df_v.groupby(['Líder directo:', 'Categoria']).size().reset_index(name='Total')
             
-            # Acortar texto solo para visualizar, el Tooltip muestra todo
+            # 2. Acortamos nombres
             conteo['Líder Corto'] = conteo['Líder directo:'].apply(lambda x: x[:20] + '...' if len(str(x)) > 20 else x)
             
             total_por_lider = conteo.groupby('Líder Corto')['Total'].sum().sort_values(ascending=True)
-            
-            # Altura dinámica: Si hay muchos líderes, hacemos el gráfico más alto para que quepan en el celular
             altura_grafico = 450 + (len(total_por_lider) * 20)
+
+            # 3. Definimos colores fijos para que se vea ordenado
+            # Puedes cambiar los códigos hex si quieres otros tonos
+            color_map = {
+                "General": "#3b82f6",   # Azul brillante
+                "VIP": "#eab308",       # Amarillo Oro
+                "Platinum": "#1e3a8a",  # Azul oscuro
+                "Servidores": "#10b981" # Verde esmeralda
+            }
 
             fig = px.bar(
                 conteo, 
                 y='Líder Corto', 
                 x='Total', 
-                color='Entrada', 
+                color='Categoria', # <--- USAMOS LA CATEGORÍA LIMPIA
                 text='Total', 
                 orientation='h',
-                height=altura_grafico, # Altura inteligente
+                height=altura_grafico,
                 hover_data={'Líder directo:': True, 'Líder Corto': False},
                 category_orders={'Líder Corto': total_por_lider.index},
-                color_discrete_sequence=px.colors.qualitative.Prism 
+                color_discrete_map=color_map, # Aplicamos mapa de colores
+                color_discrete_sequence=px.colors.qualitative.Bold # Backup por si sale una categoria nueva
             )
             
             fig.update_layout(
-                # --- FONDO Y CUADRÍCULA ---
-                plot_bgcolor='white',         # Fondo blanco dentro del gráfico
-                paper_bgcolor='white',        # Fondo blanco alrededor
+                # --- FONDO PERSONALIZADO ---
+                plot_bgcolor='#f8fafc',       # <--- Gris muy suave DETRÁS de las barras
+                paper_bgcolor='white',        # Blanco alrededor
                 xaxis=dict(
-                    showgrid=True,            # <--- MUESTRA LA CUADRÍCULA VERTICAL
-                    gridcolor='#e2e8f0',      # Color gris suave para la cuadrícula
+                    showgrid=True,
+                    gridcolor='#e2e8f0',
                     title="Cantidad de Inscritos"
                 ),
-                yaxis=dict(
-                    title=None,
-                    automargin=True           # <--- EVITA QUE SE CORTEN LOS NOMBRES EN CELULAR
-                ),
+                yaxis=dict(title=None, automargin=True),
                 font=dict(family="Inter", size=12, color="#374151"),
-                margin=dict(l=0, r=10, t=30, b=100), # Margen inferior grande para la leyenda
-                
-                # --- LEYENDA RESPONSIVE ---
+                margin=dict(l=0, r=10, t=30, b=80),
                 legend=dict(
                     orientation="h",
-                    yanchor="top", 
-                    y=-0.1,  # Debajo del gráfico
-                    xanchor="left", 
-                    x=0,
-                    title=None,
-                    itemwidth=30 # Ajuste para que quepan mejor
+                    yanchor="top", y=-0.1, xanchor="center", x=0.5,
+                    title=None
                 ),
                 bargap=0.3
             )
             fig.update_traces(textposition='auto', textfont_size=12)
-            st.plotly_chart(fig, use_container_width=True) # <--- ESTO ES CLAVE PARA CELULARES
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info(f"Mostrando detalle para: {f_lider}")
 
@@ -217,7 +217,7 @@ if df is not None:
         # --- TABLA ---
         st.subheader("📋 Base de Datos")
         cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
-                    'Teléfono':'Celular', 'Entrada':'Detalle Entrada', 'Fecha de pago':'Fecha'}
+                    'Teléfono':'Celular', 'Categoria':'Tipo Entrada', 'Fecha de pago':'Fecha'}
         cols_ok = [c for c in cols_map.keys() if c in df_v.columns]
         
         df_display = df_v[cols_ok].rename(columns=cols_map)
@@ -234,5 +234,4 @@ if df is not None:
         )
 else:
     st.warning("Cargando datos...")
-
 
