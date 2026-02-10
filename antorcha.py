@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS (CORREGIDO: MENÚ VISIBLE) ---
+# --- 2. ESTILOS CSS (CORREGIDO: TABLA SIN DESCUADRE) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -26,28 +26,26 @@ st.markdown("""
     .stApp { background-color: #f3f4f6; }
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
 
-    /* --- AJUSTE DE ESPACIOS --- */
-    /* Damos un poco de espacio arriba (2rem) para que quepa el botón del menú sin tapar el título */
+    /* Espacios del contenedor principal */
     div.block-container {
         padding-top: 2rem !important;
         padding-bottom: 1rem !important;
         margin-top: 0rem !important;
     }
     
-    /* Ocultamos elementos innecesarios, PERO DEJAMOS EL HEADER VISIBLE PARA VER LA FLECHITA */
+    /* Ocultar elementos innecesarios */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    /* header {visibility: hidden;}  <-- ESTA LÍNEA SE ELIMINÓ PARA RECUPERAR EL MENÚ */
 
-    /* ESTILO PARA LA FLECHITA DEL MENÚ (CUANDO ESTÁ CERRADO) */
+    /* Flechita del menú visible y azul */
     [data-testid="stSidebarCollapsedControl"] {
-        color: #2563eb !important; /* Azul fuerte */
+        color: #2563eb !important;
         background-color: white;
         border-radius: 50%;
         border: 1px solid #e5e7eb;
     }
 
-    /* Encabezado Principal */
+    /* Encabezado */
     h1 {
         color: #111827;
         font-weight: 700;
@@ -56,14 +54,13 @@ st.markdown("""
         text-transform: uppercase;
         margin-top: 0px !important;
     }
-    
     .subtitle {
         color: #6b7280;
         font-size: 0.9rem !important;
         margin-bottom: 1rem;
     }
 
-    /* Tarjetas de Métricas (KPIs) */
+    /* KPI Cards */
     div[data-testid="stMetric"] {
         background-color: white;
         padding: 10px 15px;
@@ -72,11 +69,17 @@ st.markdown("""
         border-left: 4px solid #3b82f6;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    div[data-testid="stMetricLabel"] { font-size: 0.75rem !important; }
-    div[data-testid="stMetricValue"] { font-size: 1.4rem !important; }
-
-    /* Contenedores (Tabla y Gráfico) */
-    .stDataFrame, .css-1r6slb0, .stPlotlyChart {
+    
+    /* CORRECCIÓN: Quitamos el padding extra a la tabla para que no se descuadre */
+    .stDataFrame {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        /* padding: 10px;  <-- ELIMINADO */
+    }
+    
+    /* Gráficos con fondo blanco */
+    .stPlotlyChart {
         background-color: white;
         border-radius: 8px;
         padding: 10px;
@@ -91,6 +94,7 @@ ARCHIVO_EXCEL = "PAGO DE ANTORCHA 2026.xlsx"
 @st.cache_data
 def load_data(filepath):
     try:
+        # Intenta leer asumiendo el nombre exacto
         if filepath.endswith('.csv'):
             df = pd.read_csv(filepath)
         else:
@@ -106,7 +110,7 @@ def load_data(filepath):
 # --- 4. LÓGICA PRINCIPAL ---
 
 if not os.path.exists(ARCHIVO_EXCEL):
-    st.error(f"🚫 Falta archivo: {ARCHIVO_EXCEL}")
+    st.error(f"🚫 No encuentro el archivo: {ARCHIVO_EXCEL}. Asegúrate de subirlo a GitHub con ese nombre exacto.")
     st.stop()
 
 df = load_data(ARCHIVO_EXCEL)
@@ -131,7 +135,7 @@ if df is not None:
         st.cache_data.clear()
         st.rerun()
     
-    # --- APLICAR FILTROS ---
+    # --- FILTROS ---
     df_v = df.copy()
     if isinstance(date_range, tuple) and len(date_range) == 2:
         df_v = df_v[(df_v['Fecha de pago'] >= date_range[0]) & (df_v['Fecha de pago'] <= date_range[1])]
@@ -154,14 +158,30 @@ if df is not None:
 
     st.markdown("---")
 
-    # --- 1. TABLA ---
+    # --- 1. TABLA (MEJORADA) ---
     st.subheader("📋 Detalle de Operaciones")
+    
+    # Mapeo de columnas
     cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
                 'Teléfono':'Celular', 'Entrada':'Tipo', 'Fecha de pago':'Fecha'}
     cols_ok = [c for c in cols_map.keys() if c in df_v.columns]
     
     if not df_v.empty:
-        st.dataframe(df_v[cols_ok].rename(columns=cols_map), use_container_width=True, hide_index=True, height=300)
+        # Preparamos el dataframe
+        df_display = df_v[cols_ok].rename(columns=cols_map)
+        
+        # Mostramos la tabla con configuración de columnas para evitar cortes
+        st.dataframe(
+            df_display,
+            use_container_width=True,
+            hide_index=True,
+            height=300,
+            column_config={
+                "Líder": st.column_config.TextColumn("Líder", width="medium"),
+                "Tipo": st.column_config.TextColumn("Tipo", width="medium"),
+                "Celular": st.column_config.TextColumn("Celular", width="small")
+            }
+        )
     else:
         st.warning("Sin datos para mostrar.")
 
