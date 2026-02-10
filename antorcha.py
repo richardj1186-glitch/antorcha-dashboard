@@ -6,13 +6,13 @@ import datetime
 
 # --- 1. CONFIGURACIÓN DEL SITIO ---
 st.set_page_config(
-    page_title="Antorcha 2026",
+    page_title="Monitor Antorcha",
     layout="wide",
     page_icon="🔥",
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS (CORREGIDO: TABLA SIN DESCUADRE) ---
+# --- 2. ESTILOS CSS PROFESIONALES ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -20,81 +20,92 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
         font-size: 14px;
+        color: #1f2937;
     }
 
-    /* Fondo */
-    .stApp { background-color: #f3f4f6; }
-    [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
+    /* Fondo general */
+    .stApp { background-color: #f8fafc; }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] { 
+        background-color: #ffffff; 
+        border-right: 1px solid #e2e8f0; 
+    }
 
-    /* Espacios del contenedor principal */
+    /* Espaciado superior */
     div.block-container {
         padding-top: 2rem !important;
-        padding-bottom: 1rem !important;
-        margin-top: 0rem !important;
+        padding-bottom: 2rem !important;
     }
     
-    /* Ocultar elementos innecesarios */
+    /* Ocultar elementos default */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Flechita del menú visible y azul */
+    /* Flecha menú */
     [data-testid="stSidebarCollapsedControl"] {
         color: #2563eb !important;
         background-color: white;
+        border: 1px solid #e2e8f0;
         border-radius: 50%;
-        border: 1px solid #e5e7eb;
     }
 
-    /* Encabezado */
+    /* Títulos */
     h1 {
-        color: #111827;
-        font-weight: 700;
-        font-size: 1.6rem !important;
-        margin-bottom: 0.2rem;
+        color: #1e3a8a; /* Azul oscuro */
+        font-weight: 800;
+        font-size: 1.8rem !important;
         text-transform: uppercase;
-        margin-top: 0px !important;
+        margin-bottom: 0.5rem;
     }
     .subtitle {
-        color: #6b7280;
-        font-size: 0.9rem !important;
-        margin-bottom: 1rem;
+        color: #64748b;
+        font-size: 1rem !important;
+        margin-bottom: 1.5rem;
     }
 
-    /* KPI Cards */
+    /* Tarjetas KPI */
     div[data-testid="stMetric"] {
         background-color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-        border-left: 4px solid #3b82f6;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 15px 20px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     
-    /* CORRECCIÓN: Quitamos el padding extra a la tabla para que no se descuadre */
-    .stDataFrame {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        /* padding: 10px;  <-- ELIMINADO */
+    div[data-testid="stMetricLabel"] { 
+        font-size: 0.85rem !important; 
+        color: #64748b;
+        font-weight: 600;
     }
-    
-    /* Gráficos con fondo blanco */
-    .stPlotlyChart {
+    div[data-testid="stMetricValue"] { 
+        font-size: 1.8rem !important; 
+        color: #1e3a8a;
+        font-weight: 700;
+    }
+
+    /* Tablas y Gráficos */
+    .stDataFrame, .stPlotlyChart {
         background-color: white;
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GESTIÓN DE DATOS ---
+# --- 3. CARGA DE DATOS ---
 ARCHIVO_EXCEL = "PAGO DE ANTORCHA 2026.xlsx"
 
 @st.cache_data
 def load_data(filepath):
     try:
-        # Intenta leer asumiendo el nombre exacto
         if filepath.endswith('.csv'):
             df = pd.read_csv(filepath)
         else:
@@ -107,35 +118,35 @@ def load_data(filepath):
     except Exception as e:
         return None
 
-# --- 4. LÓGICA PRINCIPAL ---
+# --- 4. LÓGICA DE NEGOCIO ---
 
 if not os.path.exists(ARCHIVO_EXCEL):
-    st.error(f"🚫 No encuentro el archivo: {ARCHIVO_EXCEL}. Asegúrate de subirlo a GitHub con ese nombre exacto.")
+    st.error(f"🚫 No se encuentra el archivo: {ARCHIVO_EXCEL}")
     st.stop()
 
 df = load_data(ARCHIVO_EXCEL)
 
 if df is not None:
-    # --- SIDEBAR ---
-    st.sidebar.markdown("### 🛠️ Panel de Control")
+    # --- BARRA LATERAL (FILTROS) ---
+    st.sidebar.markdown("### 🎯 Filtros de Control")
     
     min_d = df['Fecha de pago'].min() if 'Fecha de pago' in df.columns else datetime.date.today()
     max_d = df['Fecha de pago'].max() if 'Fecha de pago' in df.columns else datetime.date.today()
     
-    date_range = st.sidebar.date_input("📅 Periodo:", (min_d, max_d))
-    st.sidebar.markdown("---")
+    date_range = st.sidebar.date_input("📅 Rango de Fechas:", (min_d, max_d))
+    st.sidebar.divider()
     
     lideres = ["Todos"] + sorted(df['Líder directo:'].astype(str).unique().tolist())
     tipos = ["Todos"] + sorted(df['Entrada'].astype(str).unique().tolist())
     
-    f_lider = st.sidebar.selectbox("👤 Líder:", lideres)
-    f_entrada = st.sidebar.selectbox("🎫 Entrada:", tipos)
+    f_lider = st.sidebar.selectbox("👤 Filtrar por Líder:", lideres)
+    f_entrada = st.sidebar.selectbox("🎫 Filtrar por Entrada:", tipos)
     
-    if st.sidebar.button("🔄 Actualizar", use_container_width=True):
+    if st.sidebar.button("🔄 Refrescar Datos", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-    
-    # --- FILTROS ---
+
+    # --- FILTRADO ---
     df_v = df.copy()
     if isinstance(date_range, tuple) and len(date_range) == 2:
         df_v = df_v[(df_v['Fecha de pago'] >= date_range[0]) & (df_v['Fecha de pago'] <= date_range[1])]
@@ -144,69 +155,93 @@ if df is not None:
     if f_entrada != "Todos":
         df_v = df_v[df_v['Entrada'] == f_entrada]
 
-    # --- DASHBOARD ---
-    st.markdown('<h1>MINISTERIO DE MATRIMONIOS JÓVENES - <span style="color:#3b82f6">ANTORCHA 2026</span></h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Monitor ejecutivo de control de entradas.</p>', unsafe_allow_html=True)
+    # --- HEADER ---
+    st.markdown('<h1>Monitor <span style="color:#2563eb">Antorcha 2026</span></h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="subtitle">Última actualización: {datetime.datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
+
+    # --- KPIS ---
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Total Inscritos", len(df_v), delta="Personas")
+    k2.metric("Líderes Activos", df_v['Líder directo:'].nunique())
     
-    # KPIs
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Inscritos", len(df_v))
-    c2.metric("Líderes", df_v['Líder directo:'].nunique())
-    c3.metric("Top Entrada", df_v['Entrada'].mode()[0] if not df_v.empty else "-")
+    top_entrada = df_v['Entrada'].mode()[0] if not df_v.empty else "-"
+    # Acortamos el nombre de la entrada si es muy largo para el KPI
+    k3.metric("Entrada Más Vendida", top_entrada[:15] + "..." if len(top_entrada) > 15 else top_entrada)
+    
     pct = (len(df_v)/len(df)*100) if len(df) > 0 else 0
-    c4.metric("Avance", f"{pct:.1f}%")
+    k4.metric("Porcentaje del Total", f"{pct:.1f}%")
 
-    st.markdown("---")
+    st.divider()
 
-    # --- 1. TABLA (MEJORADA) ---
-    st.subheader("📋 Detalle de Operaciones")
-    
-    # Mapeo de columnas
-    cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
-                'Teléfono':'Celular', 'Entrada':'Tipo', 'Fecha de pago':'Fecha'}
-    cols_ok = [c for c in cols_map.keys() if c in df_v.columns]
-    
+    # --- SECCIÓN 1: GRÁFICO MEJORADO ---
     if not df_v.empty:
-        # Preparamos el dataframe
+        c_chart, c_table = st.columns([1, 1]) # Dividimos pantalla si quieres, o uno abajo de otro. Aquí lo dejo uno abajo de otro mejor.
+
+        st.subheader("📊 Rendimiento por Líder")
+        
+        if f_lider == "Todos":
+            # 1. Agrupar datos
+            conteo = df_v.groupby(['Líder directo:', 'Entrada']).size().reset_index(name='Total')
+            
+            # 2. Crear columna de Nombres Cortos para el eje Y (Truco para que no se vea feo)
+            conteo['Líder Corto'] = conteo['Líder directo:'].apply(lambda x: x[:25] + '...' if len(str(x)) > 25 else x)
+            
+            # 3. Ordenar para que el mejor salga arriba
+            total_por_lider = conteo.groupby('Líder Corto')['Total'].sum().sort_values(ascending=True)
+            
+            # 4. Gráfico con paleta profesional
+            fig = px.bar(
+                conteo, 
+                y='Líder Corto', 
+                x='Total', 
+                color='Entrada', 
+                text='Total', 
+                orientation='h',
+                height=500,
+                # Usamos los nombres reales en el tooltip al pasar el mouse
+                hover_data={'Líder directo:': True, 'Líder Corto': False},
+                category_orders={'Líder Corto': total_por_lider.index},
+                color_discrete_sequence=px.colors.qualitative.Pastel # Colores más suaves y profesionales
+            )
+            
+            fig.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', 
+                paper_bgcolor='rgba(0,0,0,0)',
+                xaxis_title="Cantidad de Inscritos", 
+                yaxis_title=None,
+                font=dict(family="Inter", size=12, color="#374151"),
+                margin=dict(l=10, r=10, t=30, b=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title=None),
+                bargap=0.3 # Barras un poco más delgadas y elegantes
+            )
+            fig.update_traces(textposition='auto', textfont_size=12)
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(f"Viendo datos específicos de: {f_lider}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- SECCIÓN 2: TABLA DETALLADA ---
+        st.subheader("📋 Base de Datos Filtrada")
+        
+        cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
+                    'Teléfono':'Celular', 'Entrada':'Tipo', 'Fecha de pago':'Fecha'}
+        cols_ok = [c for c in cols_map.keys() if c in df_v.columns]
+        
         df_display = df_v[cols_ok].rename(columns=cols_map)
         
-        # Mostramos la tabla con configuración de columnas para evitar cortes
+        # Tabla interactiva
         st.dataframe(
             df_display,
             use_container_width=True,
             hide_index=True,
-            height=300,
+            height=400,
             column_config={
-                "Líder": st.column_config.TextColumn("Líder", width="medium"),
-                "Tipo": st.column_config.TextColumn("Tipo", width="medium"),
-                "Celular": st.column_config.TextColumn("Celular", width="small")
+                "Fecha": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
+                "Celular": st.column_config.TextColumn("WhatsApp"),
             }
         )
-    else:
-        st.warning("Sin datos para mostrar.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # --- 2. GRÁFICO ---
-    if f_lider == "Todos" and not df_v.empty:
-        st.subheader("📊 Ranking")
-        conteo = df_v.groupby(['Líder directo:', 'Entrada']).size().reset_index(name='Total')
-        total_lider = conteo.groupby('Líder directo:')['Total'].sum().sort_values(ascending=True)
-        
-        fig = px.bar(
-            conteo, y='Líder directo:', x='Total', color='Entrada', text='Total', orientation='h', height=500,
-            color_discrete_sequence=px.colors.qualitative.Prism,
-            category_orders={'Líder directo:': total_lider.index}
-        )
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            xaxis_title="Inscritos", yaxis_title=None,
-            font=dict(family="Inter", size=11, color="#374151"),
-            margin=dict(l=0, r=0, t=30, b=0),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        fig.update_traces(textfont_size=11, textposition='inside')
-        st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.error("Error cargando archivo.")
+    st.warning("Esperando datos...")
