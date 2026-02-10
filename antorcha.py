@@ -22,7 +22,7 @@ st.markdown("""
         font-size: 14px;
         color: #1f2937;
     }
-    .stApp { background-color: #f8fafc; } /* Fondo gris muy claro */
+    .stApp { background-color: #f8fafc; } 
     
     div.block-container { 
         padding-top: 1rem !important; 
@@ -31,7 +31,6 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Flecha menú */
     [data-testid="stSidebarCollapsedControl"] {
         color: #2563eb !important;
         background-color: white;
@@ -162,6 +161,8 @@ if df is not None:
                 conteo, 
                 y='Líder Corto', x='Total', color='Categoria', text='Total', orientation='h',
                 height=altura_grafico,
+                # IMPORTANTE: Mantenemos el tooltip (hover) para leer el nombre completo, 
+                # pero bloquearemos el movimiento abajo.
                 hover_data={'Líder directo:': True, 'Líder Corto': False},
                 category_orders={'Líder Corto': total_por_lider.index},
                 color_discrete_map=color_map,
@@ -169,33 +170,39 @@ if df is not None:
             )
             
             fig.update_layout(
-                # FONDO GRIS MÁS VISIBLE (#e2e8f0 es gris azulado suave)
                 plot_bgcolor='#e2e8f0',       
                 paper_bgcolor='white',        
                 
+                # --- AQUÍ ESTÁ EL CANDADO ---
+                dragmode=False,   # <--- ESTO EVITA QUE SE MUEVA AL DAR CLICK
+                
                 xaxis=dict(
                     showgrid=True,
-                    gridcolor='white', # Rejilla blanca sobre fondo gris (se ve muy moderno)
+                    gridcolor='white',
                     title=None,
-                    side='top'
+                    side='top',
+                    fixedrange=True # <--- Bloquea zoom en eje X
                 ),
-                yaxis=dict(title=None, automargin=True),
+                yaxis=dict(
+                    title=None, 
+                    automargin=True,
+                    fixedrange=True # <--- Bloquea zoom en eje Y
+                ),
                 font=dict(family="Inter", size=12, color="#374151"),
                 
-                # --- SOLUCIÓN DE LEYENDA ---
-                # Alineamos a la IZQUIERDA (x=0) en lugar del centro.
-                # Esto evita que se corte en el celular.
                 legend=dict(
                     orientation="h",
                     yanchor="bottom", y=1.02,
-                    xanchor="left", x=0,  # <--- ESTO ARREGLA EL CELULAR
+                    xanchor="left", x=0,
                     title=None
                 ),
                 margin=dict(l=0, r=10, t=80, b=20),
                 bargap=0.3
             )
             fig.update_traces(textposition='inside', textfont_size=12, textfont_color="white")
-            st.plotly_chart(fig, use_container_width=True)
+            
+            # config={'displayModeBar': False} <--- OCULTA LA BARRA DE HERRAMIENTAS
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
         else:
             st.info(f"Mostrando detalle para: {f_lider}")
 
@@ -217,4 +224,5 @@ if df is not None:
         )
 else:
     st.warning("Cargando datos...")
+
 
