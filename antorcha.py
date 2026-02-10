@@ -42,7 +42,7 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Flecha menú */
+    /* Flecha menú visible y estilizada */
     [data-testid="stSidebarCollapsedControl"] {
         color: #2563eb !important;
         background-color: white;
@@ -159,37 +159,38 @@ if df is not None:
     st.markdown('<h1>Monitor <span style="color:#2563eb">Antorcha 2026</span></h1>', unsafe_allow_html=True)
     st.markdown(f'<p class="subtitle">Última actualización: {datetime.datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
 
-    # --- KPIS ---
+    # --- KPIS (MEJORADO) ---
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Total Inscritos", len(df_v), delta="Personas")
     k2.metric("Líderes Activos", df_v['Líder directo:'].nunique())
     
-    top_entrada = df_v['Entrada'].mode()[0] if not df_v.empty else "-"
-    # Acortamos el nombre de la entrada si es muy largo para el KPI
-    k3.metric("Entrada Más Vendida", top_entrada[:15] + "..." if len(top_entrada) > 15 else top_entrada)
+    # Lógica inteligente para Entrada Top
+    if not df_v.empty:
+        top_entrada_full = df_v['Entrada'].mode()[0]
+        cantidad_top = len(df_v[df_v['Entrada'] == top_entrada_full])
+        # Limpiamos el nombre: "General (S/140)" -> "General"
+        nombre_corto = top_entrada_full.split('(')[0].strip()
+        k3.metric("Entrada Más Vendida", nombre_corto, delta=f"{cantidad_top} vendidas")
+    else:
+        k3.metric("Entrada Más Vendida", "-")
     
     pct = (len(df_v)/len(df)*100) if len(df) > 0 else 0
     k4.metric("Porcentaje del Total", f"{pct:.1f}%")
 
     st.divider()
 
-    # --- SECCIÓN 1: GRÁFICO MEJORADO ---
+    # --- SECCIÓN 1: GRÁFICO ---
     if not df_v.empty:
-        c_chart, c_table = st.columns([1, 1]) # Dividimos pantalla si quieres, o uno abajo de otro. Aquí lo dejo uno abajo de otro mejor.
-
         st.subheader("📊 Rendimiento por Líder")
         
         if f_lider == "Todos":
-            # 1. Agrupar datos
             conteo = df_v.groupby(['Líder directo:', 'Entrada']).size().reset_index(name='Total')
             
-            # 2. Crear columna de Nombres Cortos para el eje Y (Truco para que no se vea feo)
+            # Acortamos nombres largos para el eje Y
             conteo['Líder Corto'] = conteo['Líder directo:'].apply(lambda x: x[:25] + '...' if len(str(x)) > 25 else x)
             
-            # 3. Ordenar para que el mejor salga arriba
             total_por_lider = conteo.groupby('Líder Corto')['Total'].sum().sort_values(ascending=True)
             
-            # 4. Gráfico con paleta profesional
             fig = px.bar(
                 conteo, 
                 y='Líder Corto', 
@@ -198,10 +199,9 @@ if df is not None:
                 text='Total', 
                 orientation='h',
                 height=500,
-                # Usamos los nombres reales en el tooltip al pasar el mouse
                 hover_data={'Líder directo:': True, 'Líder Corto': False},
                 category_orders={'Líder Corto': total_por_lider.index},
-                color_discrete_sequence=px.colors.qualitative.Pastel # Colores más suaves y profesionales
+                color_discrete_sequence=px.colors.qualitative.Pastel
             )
             
             fig.update_layout(
@@ -212,17 +212,16 @@ if df is not None:
                 font=dict(family="Inter", size=12, color="#374151"),
                 margin=dict(l=10, r=10, t=30, b=0),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title=None),
-                bargap=0.3 # Barras un poco más delgadas y elegantes
+                bargap=0.3
             )
             fig.update_traces(textposition='auto', textfont_size=12)
-            
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info(f"Viendo datos específicos de: {f_lider}")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- SECCIÓN 2: TABLA DETALLADA ---
+        # --- SECCIÓN 2: TABLA ---
         st.subheader("📋 Base de Datos Filtrada")
         
         cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
@@ -231,7 +230,6 @@ if df is not None:
         
         df_display = df_v[cols_ok].rename(columns=cols_map)
         
-        # Tabla interactiva
         st.dataframe(
             df_display,
             use_container_width=True,
@@ -245,3 +243,4 @@ if df is not None:
 
 else:
     st.warning("Esperando datos...")
+
