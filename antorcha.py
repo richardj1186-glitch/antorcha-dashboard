@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. ESTILOS CSS PROFESIONALES ---
+# --- 2. ESTILOS CSS (Limpios y Ordenados) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -22,27 +22,14 @@ st.markdown("""
         font-size: 14px;
         color: #1f2937;
     }
-
-    /* Fondo general */
     .stApp { background-color: #f8fafc; }
     
-    /* Sidebar */
-    [data-testid="stSidebar"] { 
-        background-color: #ffffff; 
-        border-right: 1px solid #e2e8f0; 
-    }
-
-    /* Espaciado superior */
-    div.block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
-    }
-    
-    /* Ocultar elementos default */
+    /* Ajuste de espacios */
+    div.block-container { padding-top: 2rem !important; padding-bottom: 3rem !important; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Flecha menú visible y estilizada */
+    /* Flecha menú */
     [data-testid="stSidebarCollapsedControl"] {
         color: #2563eb !important;
         background-color: white;
@@ -51,43 +38,19 @@ st.markdown("""
     }
 
     /* Títulos */
-    h1 {
-        color: #1e3a8a; /* Azul oscuro */
-        font-weight: 800;
-        font-size: 1.8rem !important;
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-    }
-    .subtitle {
-        color: #64748b;
-        font-size: 1rem !important;
-        margin-bottom: 1.5rem;
-    }
+    h1 { color: #1e3a8a; font-weight: 800; font-size: 1.8rem !important; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .subtitle { color: #64748b; font-size: 1rem !important; margin-bottom: 1.5rem; }
 
-    /* Tarjetas KPI */
+    /* KPI Cards */
     div[data-testid="stMetric"] {
         background-color: white;
         padding: 15px 20px;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-    
-    div[data-testid="stMetricLabel"] { 
-        font-size: 0.85rem !important; 
-        color: #64748b;
-        font-weight: 600;
-    }
-    div[data-testid="stMetricValue"] { 
-        font-size: 1.8rem !important; 
-        color: #1e3a8a;
-        font-weight: 700;
-    }
+    div[data-testid="stMetricLabel"] { font-size: 0.85rem !important; color: #64748b; font-weight: 600; }
+    div[data-testid="stMetricValue"] { font-size: 1.8rem !important; color: #1e3a8a; font-weight: 700; }
 
     /* Tablas y Gráficos */
     .stDataFrame, .stPlotlyChart {
@@ -106,14 +69,23 @@ ARCHIVO_EXCEL = "PAGO DE ANTORCHA 2026.xlsx"
 @st.cache_data
 def load_data(filepath):
     try:
+        # Soporte para CSV o Excel
         if filepath.endswith('.csv'):
             df = pd.read_csv(filepath)
         else:
             df = pd.read_excel(filepath)
         
         df.columns = df.columns.str.strip()
+        # Convertir fecha
         if 'Fecha de pago' in df.columns:
             df['Fecha de pago'] = pd.to_datetime(df['Fecha de pago'], errors='coerce').dt.date
+        
+        # --- LIMPIEZA DE DATOS AUTOMÁTICA ---
+        # Creamos una columna "Categoria" que limpia el texto largo
+        # Ejemplo: "General (Precio Oferta...)" -> "General"
+        if 'Entrada' in df.columns:
+            df['Categoria'] = df['Entrada'].apply(lambda x: str(x).split('(')[0].strip())
+            
         return df
     except Exception as e:
         return None
@@ -121,28 +93,29 @@ def load_data(filepath):
 # --- 4. LÓGICA DE NEGOCIO ---
 
 if not os.path.exists(ARCHIVO_EXCEL):
-    st.error(f"🚫 No se encuentra el archivo: {ARCHIVO_EXCEL}")
+    st.error(f"🚫 Archivo no encontrado: {ARCHIVO_EXCEL}")
     st.stop()
 
 df = load_data(ARCHIVO_EXCEL)
 
 if df is not None:
-    # --- BARRA LATERAL (FILTROS) ---
-    st.sidebar.markdown("### 🎯 Filtros de Control")
+    # --- SIDEBAR ---
+    st.sidebar.markdown("### 🎯 Filtros")
     
     min_d = df['Fecha de pago'].min() if 'Fecha de pago' in df.columns else datetime.date.today()
     max_d = df['Fecha de pago'].max() if 'Fecha de pago' in df.columns else datetime.date.today()
     
-    date_range = st.sidebar.date_input("📅 Rango de Fechas:", (min_d, max_d))
+    date_range = st.sidebar.date_input("📅 Fechas:", (min_d, max_d))
     st.sidebar.divider()
     
     lideres = ["Todos"] + sorted(df['Líder directo:'].astype(str).unique().tolist())
-    tipos = ["Todos"] + sorted(df['Entrada'].astype(str).unique().tolist())
+    # Usamos la categoría limpia para el filtro también, es más amigable
+    tipos = ["Todos"] + sorted(df['Categoria'].astype(str).unique().tolist())
     
-    f_lider = st.sidebar.selectbox("👤 Filtrar por Líder:", lideres)
-    f_entrada = st.sidebar.selectbox("🎫 Filtrar por Entrada:", tipos)
+    f_lider = st.sidebar.selectbox("👤 Líder:", lideres)
+    f_entrada = st.sidebar.selectbox("🎫 Tipo Entrada:", tipos)
     
-    if st.sidebar.button("🔄 Refrescar Datos", use_container_width=True):
+    if st.sidebar.button("🔄 Refrescar", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
@@ -153,79 +126,82 @@ if df is not None:
     if f_lider != "Todos":
         df_v = df_v[df_v['Líder directo:'] == f_lider]
     if f_entrada != "Todos":
-        df_v = df_v[df_v['Entrada'] == f_entrada]
+        df_v = df_v[df_v['Categoria'] == f_entrada] # Filtramos por la categoría limpia
 
     # --- HEADER ---
     st.markdown('<h1>Monitor <span style="color:#2563eb">Antorcha 2026</span></h1>', unsafe_allow_html=True)
-    st.markdown(f'<p class="subtitle">Última actualización: {datetime.datetime.now().strftime("%d/%m/%Y %H:%M")}</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="subtitle">Actualizado al: {datetime.datetime.now().strftime("%d/%m %H:%M")}</p>', unsafe_allow_html=True)
 
-    # --- KPIS (MEJORADO) ---
+    # --- KPIS ---
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Total Inscritos", len(df_v), delta="Personas")
+    k1.metric("Inscritos", len(df_v), delta="Personas")
     k2.metric("Líderes Activos", df_v['Líder directo:'].nunique())
     
-    # Lógica inteligente para Entrada Top
+    # Lógica KPI Mejorada: Usa la columna limpia 'Categoria'
     if not df_v.empty:
-        top_entrada_full = df_v['Entrada'].mode()[0]
-        cantidad_top = len(df_v[df_v['Entrada'] == top_entrada_full])
-        # Limpiamos el nombre: "General (S/140)" -> "General"
-        nombre_corto = top_entrada_full.split('(')[0].strip()
-        k3.metric("Entrada Más Vendida", nombre_corto, delta=f"{cantidad_top} vendidas")
+        top_cat = df_v['Categoria'].mode()[0]
+        cant_top = len(df_v[df_v['Categoria'] == top_cat])
+        k3.metric("Entrada Top", top_cat, delta=f"{cant_top} vendidas")
     else:
-        k3.metric("Entrada Más Vendida", "-")
+        k3.metric("Entrada Top", "-")
     
     pct = (len(df_v)/len(df)*100) if len(df) > 0 else 0
-    k4.metric("Porcentaje del Total", f"{pct:.1f}%")
+    k4.metric("Meta Global", f"{pct:.1f}%")
 
     st.divider()
 
-    # --- SECCIÓN 1: GRÁFICO ---
+    # --- GRÁFICO ORDENADO ---
     if not df_v.empty:
         st.subheader("📊 Rendimiento por Líder")
         
         if f_lider == "Todos":
-            conteo = df_v.groupby(['Líder directo:', 'Entrada']).size().reset_index(name='Total')
+            # Agrupamos por Líder y Categoria (el nombre corto)
+            conteo = df_v.groupby(['Líder directo:', 'Categoria']).size().reset_index(name='Total')
             
-            # Acortamos nombres largos para el eje Y
+            # Acortar nombres de líderes (eje Y)
             conteo['Líder Corto'] = conteo['Líder directo:'].apply(lambda x: x[:25] + '...' if len(str(x)) > 25 else x)
             
-            total_por_lider = conteo.groupby('Líder Corto')['Total'].sum().sort_values(ascending=True)
+            # Ordenar ranking
+            ranking = conteo.groupby('Líder Corto')['Total'].sum().sort_values(ascending=True)
             
             fig = px.bar(
                 conteo, 
                 y='Líder Corto', 
                 x='Total', 
-                color='Entrada', 
+                color='Categoria', # <--- AQUÍ ESTÁ EL TRUCO: Usamos la categoría limpia
                 text='Total', 
                 orientation='h',
                 height=500,
+                # Tooltip muestra el nombre real completo
                 hover_data={'Líder directo:': True, 'Líder Corto': False},
-                category_orders={'Líder Corto': total_por_lider.index},
+                category_orders={'Líder Corto': ranking.index},
                 color_discrete_sequence=px.colors.qualitative.Pastel
             )
             
             fig.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)', 
                 paper_bgcolor='rgba(0,0,0,0)',
-                xaxis_title="Cantidad de Inscritos", 
+                xaxis_title=None, 
                 yaxis_title=None,
                 font=dict(family="Inter", size=12, color="#374151"),
                 margin=dict(l=10, r=10, t=30, b=0),
+                # Leyenda limpia arriba
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title=None),
-                bargap=0.3
+                bargap=0.25
             )
             fig.update_traces(textposition='auto', textfont_size=12)
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info(f"Viendo datos específicos de: {f_lider}")
+            st.info(f"Mostrando detalle para: {f_lider}")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- SECCIÓN 2: TABLA ---
-        st.subheader("📋 Base de Datos Filtrada")
+        # --- TABLA DETALLADA ---
+        st.subheader("📋 Base de Datos")
         
+        # Columnas a mostrar
         cols_map = {'Nombres':'Nombre', 'Apellidos':'Apellido', 'Líder directo:':'Líder', 
-                    'Teléfono':'Celular', 'Entrada':'Tipo', 'Fecha de pago':'Fecha'}
+                    'Teléfono':'Celular', 'Entrada':'Detalle Entrada', 'Fecha de pago':'Fecha'}
         cols_ok = [c for c in cols_map.keys() if c in df_v.columns]
         
         df_display = df_v[cols_ok].rename(columns=cols_map)
@@ -240,7 +216,6 @@ if df is not None:
                 "Celular": st.column_config.TextColumn("WhatsApp"),
             }
         )
-
 else:
-    st.warning("Esperando datos...")
+    st.warning("Cargando datos...")
 
